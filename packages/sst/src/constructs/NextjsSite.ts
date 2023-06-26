@@ -26,11 +26,12 @@ import {
   CachedMethods,
   CachePolicy,
   ICachePolicy,
+  DistributionProps,
 } from "aws-cdk-lib/aws-cloudfront";
 import { HttpOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
-import { Queue } from "aws-cdk-lib/aws-sqs";
+import { Queue, QueueProps } from "aws-cdk-lib/aws-sqs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { Stack } from "./Stack.js";
 import { SsrFunction } from "./SsrFunction.js";
@@ -95,16 +96,24 @@ export class NextjsSite extends SsrSite {
     });
   }
 
+  protected createQueue(id: string, props?: QueueProps): Queue {
+    return new Queue(this, id, props)
+  }
+
+  protected createDistribution(id: string, props: DistributionProps): Distribution {
+    return new Distribution(this, id, props)
+  }
+
   protected createRevalidation() {
     if (!this.serverLambdaForRegional && !this.serverLambdaForEdge) return;
 
     const { cdk } = this.props;
 
-    const queue = new Queue(this, "RevalidationQueue", {
+    const queue = this.createQueue("RevalidationQueue", {
       fifo: true,
       receiveMessageWaitTime: CdkDuration.seconds(20),
     });
-    const consumer = new CdkFunction(this, "RevalidationFunction", {
+    const consumer = this.createFunction("RevalidationFunction", {
       description: "Next.js revalidator",
       handler: "index.handler",
       code: Code.fromAsset(
@@ -145,7 +154,7 @@ export class NextjsSite extends SsrSite {
       environment,
       cdk,
     } = this.props;
-    return new SsrFunction(this, `ServerFunction`, {
+    return this.createSsrFunction(`ServerFunction`, {
       description: "Next.js server",
       bundle: path.join(this.props.path, ".open-next", "server-function"),
       handler: "index.handler",
@@ -187,7 +196,7 @@ export class NextjsSite extends SsrSite {
   private createImageOptimizationFunction() {
     const { imageOptimization, path: sitePath } = this.props;
 
-    const fn = new CdkFunction(this, `ImageFunction`, {
+    const fn = this.createFunction(`ImageFunction`, {
       description: "Next.js image optimizer",
       handler: "index.handler",
       currentVersionOptions: {
@@ -246,7 +255,7 @@ export class NextjsSite extends SsrSite {
     if (!this.serverLambdaForRegional) return;
 
     // Create warmer function
-    const warmer = new CdkFunction(this, "WarmerFunction", {
+    const warmer = this.createFunction("WarmerFunction", {
       description: "Next.js warmer",
       code: Code.fromAsset(
         path.join(this.props.path, ".open-next/warmer-function")
@@ -354,7 +363,7 @@ export class NextjsSite extends SsrSite {
       ]);
     const serverBehavior = this.buildDefaultBehaviorForRegional(cachePolicy);
 
-    return new Distribution(this, "Distribution", {
+    return this.createDistribution("Distribution", {
       // these values can be overwritten by cfDistributionProps
       defaultRootObject: "",
       // Override props.
@@ -385,7 +394,7 @@ export class NextjsSite extends SsrSite {
       ]);
     const serverBehavior = this.buildDefaultBehaviorForEdge(cachePolicy);
 
-    return new Distribution(this, "Distribution", {
+    return this.createDistribution("Distribution", {
       // these values can be overwritten by cfDistributionProps
       defaultRootObject: "",
       // Override props.

@@ -75,7 +75,7 @@ import { createAppContext } from "./context.js";
 import { SSTConstruct, isCDKConstruct } from "./Construct.js";
 import { NodeJSProps } from "./Function.js";
 import { Secret } from "./Secret.js";
-import { SsrFunction } from "./SsrFunction.js";
+import { SsrFunction, SsrFunctionProps } from "./SsrFunction.js";
 import { EdgeFunction } from "./EdgeFunction.js";
 import {
   BaseSiteFileOptions,
@@ -672,6 +672,20 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     }
   }
 
+
+  /////////////////////
+  // Factory methods
+  /////////////////////
+
+  protected createFunction(id: string, props: FunctionProps): CdkFunction {
+    return new CdkFunction(this, id, props)
+  }
+
+  protected createSsrFunction(id: string, props: SsrFunctionProps): SsrFunction {
+    return new SsrFunction(this, id, props);
+  }
+
+
   /////////////////////
   // Bundle S3 Assets
   /////////////////////
@@ -788,7 +802,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     return fileOptions;
   }
 
-  private createS3Bucket(): Bucket {
+  protected createS3Bucket(): Bucket {
     const { cdk } = this.props;
 
     // cdk.bucket is an imported construct
@@ -812,7 +826,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     fileOptions: SsrSiteFileOptions[]
   ): CustomResource {
     // Create a Lambda function that will be doing the uploading
-    const uploader = new CdkFunction(this, "S3Uploader", {
+    const uploader = this.createFunction("S3Uploader", {
       code: Code.fromAsset(
         path.join(__dirname, "../support/base-site-custom-resource")
       ),
@@ -826,7 +840,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     assets.forEach((asset) => asset.grantRead(uploader));
 
     // Create the custom resource function
-    const handler = new CdkFunction(this, "S3Handler", {
+    const handler = this.createFunction("S3Handler", {
       code: Code.fromAsset(
         path.join(__dirname, "../support/base-site-custom-resource")
       ),
@@ -898,7 +912,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
       maxSessionDuration: CdkDuration.hours(12),
     });
 
-    const ssrFn = new SsrFunction(this, `ServerFunction`, {
+    const ssrFn = this.createSsrFunction(`ServerFunction`, {
       description: "Server handler placeholder",
       bundle: path.join(__dirname, "../support/ssr-site-function-stub"),
       handler: "index.handler",
