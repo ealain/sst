@@ -19,6 +19,7 @@ import {
   Code,
   FunctionOptions,
   Function as CdkFunction,
+  FunctionProps,
   FunctionUrlOptions,
 } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
@@ -102,7 +103,7 @@ export class SsrFunction extends Construct implements SSTConstruct {
       assetBucket,
       assetKey
     );
-    this.function = this.createFunction(assetBucket, assetKey);
+    this.function = this.createServerFunction(assetBucket, assetKey);
     this.attachPermissions(props.permissions || []);
     this.bind(props.bind || []);
     this.function.node.addDependency(assetReplacer);
@@ -154,7 +155,7 @@ export class SsrFunction extends Construct implements SSTConstruct {
     attachPermissionsToRole(this.function.role as Role, permissions);
   }
 
-  private createFunction(assetBucket: string, assetKey: string) {
+  private createServerFunction(assetBucket: string, assetKey: string) {
     const {
       architecture,
       runtime,
@@ -164,7 +165,7 @@ export class SsrFunction extends Construct implements SSTConstruct {
       logRetention,
     } = this.props;
 
-    return new CdkFunction(this, `ServerFunction`, {
+    return this.createFunction(`ServerFunction`, {
       ...this.props,
       handler: handler.split(path.sep).join(path.posix.sep),
       logRetention: logRetention ?? RetentionDays.THREE_DAYS,
@@ -357,5 +358,13 @@ export class SsrFunction extends Construct implements SSTConstruct {
   /** @internal */
   public getFunctionBinding() {
     return undefined;
+  }
+
+  /////////////////////
+  // Factory methods
+  /////////////////////
+
+  protected createFunction(id: string, props: FunctionProps){
+    return new CdkFunction(this, id, props)
   }
 }

@@ -5,11 +5,10 @@ import { Duration as CdkDuration, RemovalPolicy } from "aws-cdk-lib/core";
 import {
   Code,
   Runtime,
-  Function as CdkFunction,
   FunctionProps,
   Architecture,
 } from "aws-cdk-lib/aws-lambda";
-import { Queue } from "aws-cdk-lib/aws-sqs";
+import { Queue, QueueProps } from "aws-cdk-lib/aws-sqs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { Stack } from "./Stack.js";
 import { SsrSite, SsrSiteProps } from "./SsrSite.js";
@@ -250,11 +249,11 @@ export class NextjsSite extends SsrSite {
 
     const { cdk } = this.props;
 
-    const queue = new Queue(this, "RevalidationQueue", {
+    const queue = this.createQueue("RevalidationQueue", {
       fifo: true,
       receiveMessageWaitTime: CdkDuration.seconds(20),
     });
-    const consumer = new CdkFunction(this, "RevalidationFunction", {
+    const consumer = this.createFunction("RevalidationFunction", {
       description: "Next.js revalidator",
       handler: "index.handler",
       code: Code.fromAsset(
@@ -278,5 +277,13 @@ export class NextjsSite extends SsrSite {
       type: "NextjsSite" as const,
       ...this.getConstructMetadataBase(),
     };
+  }
+
+  /////////////////////
+  // Factory methods
+  /////////////////////
+
+  protected createQueue(id: string, props?: QueueProps): Queue {
+    return new Queue(this, id, props)
   }
 }
