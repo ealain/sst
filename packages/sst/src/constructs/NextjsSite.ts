@@ -100,10 +100,6 @@ export class NextjsSite extends SsrSite {
     return new Queue(this, id, props)
   }
 
-  protected createDistribution(id: string, props: DistributionProps): Distribution {
-    return new Distribution(this, id, props)
-  }
-
   protected createRevalidation() {
     if (!this.serverLambdaForRegional && !this.serverLambdaForEdge) return;
 

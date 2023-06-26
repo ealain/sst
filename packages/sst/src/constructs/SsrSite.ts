@@ -62,6 +62,7 @@ import {
   Function as CfFunction,
   FunctionCode as CfFunctionCode,
   FunctionEventType as CfFunctionEventType,
+  DistributionProps,
 } from "aws-cdk-lib/aws-cloudfront";
 import { ICertificate } from "aws-cdk-lib/aws-certificatemanager";
 import { AwsCliLayer } from "aws-cdk-lib/lambda-layer-awscli";
@@ -685,6 +686,12 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     return new SsrFunction(this, id, props);
   }
 
+  /**
+   *  `domainNames`, `certificate`, `defaultBehavior` and `additionalBehaviors` should NOT be overwritten
+   */
+  protected createDistribution(id: string, props: DistributionProps): Distribution {
+    return new Distribution(this, id, props)
+  }
 
   /////////////////////
   // Bundle S3 Assets
@@ -997,7 +1004,7 @@ function handler(event) {
     const cfDistributionProps = cdk?.distribution || {};
     const cachePolicy = cdk?.serverCachePolicy ?? this.buildServerCachePolicy();
 
-    return new Distribution(this, "Distribution", {
+    return this.createDistribution("Distribution", {
       // these values can be overwritten by cfDistributionProps
       defaultRootObject: "",
       // Override props.
@@ -1017,7 +1024,7 @@ function handler(event) {
     const cfDistributionProps = cdk?.distribution || {};
     const cachePolicy = cdk?.serverCachePolicy ?? this.buildServerCachePolicy();
 
-    return new Distribution(this, "Distribution", {
+    return this.createDistribution("Distribution", {
       // these values can be overwritten by cfDistributionProps
       defaultRootObject: "",
       // Override props.

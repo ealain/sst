@@ -17,6 +17,9 @@ import * as cf from "aws-cdk-lib/aws-cloudfront";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { Api, Stack, NextjsSite, NextjsSiteProps } from "../../dist/constructs";
+import { Queue } from "aws-cdk-lib/aws-sqs";
+import { SsrFunction } from "../../dist/constructs/SsrFunction.js";
+import { Function as CdkFunction} from "aws-cdk-lib/aws-lambda";
 
 process.env.SST_RESOURCES_TESTS = "enabled";
 const sitePath = "test/constructs/nextjs-site";
@@ -133,4 +136,43 @@ test("cdk.revalidation.vpc: set", async () => {
     Description: "Next.js revalidator",
     VpcConfig: ANY,
   });
+});
+
+
+/////////////////////////////
+// Test extending ()
+/////////////////////////////
+
+test("constructor: extending factory methods", async () => {
+  const mockCreateQueue = vi.fn((scope, id, props) => new Queue(scope, id, props));
+  const mockCreateDistribution = vi.fn((scope, id, props) => new cf.Distribution(scope, id, props));
+  const mockCreateSsrFunction = vi.fn((scope, id, props) => new SsrFunction(scope, id, props));
+  const mockCreateFunction = vi.fn((scope, id, props) => new CdkFunction(scope, id, props));
+  
+  class MyNextjsSite extends NextjsSite {
+    protected createQueue(id, props) {
+      return mockCreateQueue(this, id, props);
+    }
+    protected createDistribution(id, props) {
+      return mockCreateDistribution(this, id, props);
+    }
+    protected createSsrFunction(id, props) {
+      return mockCreateSsrFunction(this, id, props);
+    }
+    protected createFunction(id, props) {
+      return mockCreateFunction(this, id, props);
+    }
+  }
+
+  const stack = new Stack(await createApp(), "stack");
+  new MyNextjsSite(stack, "Site", {
+    path: sitePath,
+    buildCommand: "echo skip",
+  });
+  countResources(stack, "AWS::SQS::Queue", 1);
+  expect(mockCreateQueue).toHaveBeenCalledOnce();
+  countResources(stack, "AWS::CloudFront::Distribution", 1);
+  expect(mockCreateDistribution).toHaveBeenCalledOnce();
+  expect(mockCreateSsrFunction).toHaveBeenCalledOnce();
+  expect(mockCreateFunction).toHaveBeenCalled();
 });
