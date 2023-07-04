@@ -920,12 +920,19 @@ function handler(event) {
   }
 
   private createSigningFunction() {
-    return new experimental.EdgeFunction(this, "SigningFunction", {
+    const fn = new experimental.EdgeFunction(this, "SigningFunction", {
       runtime: Runtime.NODEJS_18_X,
       code: Code.fromAsset(path.join(__dirname, "../support/signing-function")),
       handler: "index.handler",
       stackId: `${Stack.of(this).stackName}-edge-lambda-stack`,
     });
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['lambda:InvokeFunctionUrl'],
+        resources: [this.serverLambdaForRegional?.functionArn!],
+      })
+    )
+    return fn;
   }
 
   protected createCloudFrontDistributionForRegional(): Distribution {
