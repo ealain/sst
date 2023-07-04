@@ -920,12 +920,20 @@ function handler(event) {
   }
 
   private createSigningFunction() {
-    return new experimental.EdgeFunction(this, "SigningFunction", {
+    const fn = new experimental.EdgeFunction(this, "SigningFunction", {
       runtime: Runtime.NODEJS_18_X,
       code: Code.fromAsset(path.join(__dirname, "../support/signing-function")),
       handler: "index.handler",
       stackId: `${Stack.of(this).stackName}-edge-lambda-stack`,
     });
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['lambda:InvokeFunctionUrl'],
+        // resources: [this.serverLambdaForRegional?.functionArn!],
+        resources: ["arn:aws:lambda:eu-central-1:620784697987:function:eloial-frontend-platform--siteServerFunction6DFA6F-PvbomLQvileR"],
+      })
+    )
+    return fn;
   }
 
   protected createCloudFrontDistributionForRegional(): Distribution {
