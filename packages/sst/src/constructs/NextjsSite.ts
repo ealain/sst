@@ -26,6 +26,7 @@ import {
   CachedMethods,
   CachePolicy,
   ICachePolicy,
+  LambdaEdgeEventType,
 } from "aws-cdk-lib/aws-cloudfront";
 import { HttpOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
@@ -407,7 +408,7 @@ export class NextjsSite extends SsrSite {
     const { cdk } = this.props;
     const imageFn = this.createImageOptimizationFunction();
     const imageFnUrl = imageFn.addFunctionUrl({
-      authType: FunctionUrlAuthType.NONE,
+      authType: FunctionUrlAuthType.AWS_IAM,
     });
     return {
       viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -417,6 +418,13 @@ export class NextjsSite extends SsrSite {
       compress: true,
       cachePolicy,
       responseHeadersPolicy: cdk?.responseHeadersPolicy,
+      edgeLambdas: [
+        {
+          includeBody: true,
+          eventType: LambdaEdgeEventType.ORIGIN_REQUEST,
+          functionVersion: this.signingFunction.currentVersion,
+        },
+      ],
     };
   }
 
