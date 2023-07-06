@@ -491,3 +491,34 @@ new NextjsSite(stack, "Site", {
   },
 });
 ```
+
+#### Using custom low level constructs
+
+You can extend the `NextjsSite` by using your custom low level constructs by following [this guide](../advanced/extending-sst.md#using-custom-low-level-constructs-in-an-sst-high-level-construct).
+
+The SST construct will use your custom construct when one of the following methods is overridden
+
+```ts
+import { NextjsSite as SstNextjsSite } from 'sst/constructs'
+
+class NextjsSite extends SstNextjsSite {
+  // build SQS Queues
+  protected createQueue(id, props): Queue
+
+  // build Cloudfront Distributions
+  protected createDistribution(id, props): Distribution 
+  
+  // build sst SsrFunctions
+  protected createSsrFunction(id, props): SsrFunction 
+  
+  // build Lambda Functions
+  protected createFunction(id, props): Function 
+  
+  // Build S3 Buckets
+  protected createS3Bucket(id, props): Bucket
+}
+```
+
+:::info
+Your extension of the SST construct must be named `NextjsSite` to prevent an error when running `sst dev`.
+:::
