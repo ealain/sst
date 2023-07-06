@@ -1028,7 +1028,7 @@ function handler(event) {
         {
           includeBody: true,
           eventType: LambdaEdgeEventType.ORIGIN_REQUEST,
-          functionVersion: this.signingFunction!.currentVersion,
+          functionVersion: this.signingFunction.currentVersion,
         },
       ],
     };
