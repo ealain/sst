@@ -17,17 +17,12 @@ import {
 
 export const handler: CloudFrontRequestHandler = async (event) => {
   const request = event.Records[0].cf.request;
+  const domainName = request.origin?.custom?.domainName;
 
-  if (!isLambdaUrlRequest(request)) return request;
+  if (!domainName || !isLambdaUrlRequest(domainName)) return request;
 
-  const region = getRegionFromLambdaUrl(
-    request.origin?.custom?.domainName || ""
-  );
+  const region = getRegionFromLambdaUrl(domainName);
   const sigv4 = getSigV4(region);
-
-  // TODO: remove these 2 lines that should not happen given isLambdaUrlRequest
-  const originDomainName = request.origin?.custom?.domainName;
-  if (!originDomainName) throw new Error("Origin domain is missing");
 
   // TODO: 'x-forwarded-host' is already set, consider removing this
   // TODO: A piori, keep 'host'
@@ -36,7 +31,7 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   request.headers["x-forwarded-host"] = [
     { key: "x-forwarded-host", value: originalHost },
   ];
-  request.headers.host = [{ key: "host", value: originDomainName }];
+  request.headers.host = [{ key: "host", value: domainName }];
 
   const headerBag = cfHeadersToHeaderBag(request.headers);
   // don't sign x-forwarded-for b/c it changes from hop to hop
