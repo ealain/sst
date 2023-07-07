@@ -6,6 +6,7 @@ import {
   Duration as CdkDuration,
   RemovalPolicy,
   CustomResource,
+  PhysicalName,
 } from "aws-cdk-lib/core";
 import { Effect, Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -191,6 +192,7 @@ export class NextjsSite extends SsrSite {
     const fn = new CdkFunction(this, `ImageFunction`, {
       description: "Next.js image optimizer",
       handler: "index.handler",
+      functionName: PhysicalName.GENERATE_IF_NEEDED,
       currentVersionOptions: {
         removalPolicy: RemovalPolicy.DESTROY,
       },
