@@ -410,6 +410,12 @@ export class NextjsSite extends SsrSite {
     const imageFnUrl = imageFn.addFunctionUrl({
       authType: FunctionUrlAuthType.AWS_IAM,
     });
+    this.signingFunction.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['lambda:InvokeFunctionUrl'],
+        resources: [imageFn.functionArn],
+      })
+    )
     return {
       viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       origin: new HttpOrigin(Fn.parseDomainName(imageFnUrl.url)),
