@@ -1,6 +1,4 @@
-import {
-  CloudFrontRequestHandler,
-} from "aws-lambda";
+import { CloudFrontRequestHandler } from "aws-lambda";
 import {
   cfHeadersToHeaderBag,
   getRegionFromLambdaUrl,
@@ -19,8 +17,6 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   const region = getRegionFromLambdaUrl(domainName);
   const sigv4 = getSigV4(region);
 
-  // TODO: 'x-forwarded-host' is already set, consider removing this
-  // TODO: A piori, keep 'host'
   // fix host header and pass along the original host header
   const originalHost = request.headers.host[0].value;
   request.headers["x-forwarded-host"] = [
