@@ -1,11 +1,6 @@
 import {
-  CloudFrontHeaders,
-  CloudFrontRequest,
   CloudFrontRequestHandler,
 } from "aws-lambda";
-import { SignatureV4 } from "@aws-sdk/signature-v4";
-import { Sha256 } from "@aws-crypto/sha256-js";
-import { request } from "express";
 import {
   cfHeadersToHeaderBag,
   getRegionFromLambdaUrl,
