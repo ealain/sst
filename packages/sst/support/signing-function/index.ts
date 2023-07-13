@@ -18,8 +18,6 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   const sigv4 = getSigV4(region);
 
   const headerBag = cfHeadersToHeaderBag(request.headers);
-  // don't sign x-forwarded-for b/c it changes from hop to hop
-  delete headerBag["x-forwarded-for"];
 
   const requestToSign = {
     method: request.method,
