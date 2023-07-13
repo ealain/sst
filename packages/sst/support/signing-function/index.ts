@@ -17,8 +17,6 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   const region = getRegionFromLambdaUrl(domainName);
   const sigv4 = getSigV4(region);
 
-  request.headers.host = [{ key: "host", value: domainName }];
-
   const headerBag = cfHeadersToHeaderBag(request.headers);
   // don't sign x-forwarded-for b/c it changes from hop to hop
   delete headerBag["x-forwarded-for"];
