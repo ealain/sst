@@ -17,11 +17,6 @@ export const handler: CloudFrontRequestHandler = async (event) => {
   const region = getRegionFromLambdaUrl(domainName);
   const sigv4 = getSigV4(region);
 
-  // fix host header and pass along the original host header
-  const originalHost = request.headers.host[0].value;
-  request.headers["x-forwarded-host"] = [
-    { key: "x-forwarded-host", value: originalHost },
-  ];
   request.headers.host = [{ key: "host", value: domainName }];
 
   const headerBag = cfHeadersToHeaderBag(request.headers);
