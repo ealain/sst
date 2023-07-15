@@ -4,9 +4,9 @@ import {
   getRegionFromCustomDomainName,
   getSigV4,
   headerBagToCfHeaders,
-  queryStringToQuery,
+  queryParameterBagToQueryString,
+  queryStringToQueryParameterBag,
 } from "./helpers";
-import { queryToQueryString } from "./helpers/queryToQueryString";
 
 export const handler: CloudFrontRequestHandler = async (event) => {
   const request = event.Records[0].cf.request;
@@ -32,12 +32,8 @@ export const handler: CloudFrontRequestHandler = async (event) => {
     return request;
   }
 
-  const query = queryStringToQuery(request.querystring);
+  const query = queryStringToQueryParameterBag(request.querystring);
   const sigv4 = getSigV4(region);
-
-  if (query.url !== undefined) {
-    query.url = decodeURIComponent(query.url);
-  }
 
   const signed = await sigv4.sign({
     method: request.method,
@@ -49,7 +45,7 @@ export const handler: CloudFrontRequestHandler = async (event) => {
     body: request.body?.data ? Buffer.from(request.body.data, "base64") : undefined,
   });
   request.headers = headerBagToCfHeaders(signed.headers);
-  request.querystring = queryToQueryString(query);
+  request.querystring = queryParameterBagToQueryString(query);
 
   return request;
 };
