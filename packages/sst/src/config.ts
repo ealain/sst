@@ -141,10 +141,10 @@ export namespace Config {
       })
     );
 
-    // Publish event
-    const iot = await useIOT();
-    const topic = `${iot.prefix}/events`;
-    await iot.publish(topic, "config.secret.updated", { name: input.key });
+    // // Publish event
+    // const iot = await useIOT();
+    // const topic = `${iot.prefix}/events`;
+    // await iot.publish(topic, "config.secret.updated", { name: input.key });
   }
 
   export async function getSecret(input: { key: string; fallback?: boolean }) {
