@@ -19,6 +19,7 @@ import {
   Code,
   FunctionOptions,
   Function as CdkFunction,
+  FunctionProps,
   FunctionUrlOptions,
 } from "aws-cdk-lib/aws-lambda";
 import { Bucket } from "aws-cdk-lib/aws-s3";
@@ -98,13 +99,17 @@ export class SsrFunction extends Construct implements SSTConstruct {
       assetBucket,
       assetKey
     );
-    this.function = this.createFunction(assetBucket, assetKey);
+    this.function = this.createServerFunction(assetBucket, assetKey);
     this.attachPermissions(props.permissions || []);
     this.bind(props.bind || []);
     this.function.node.addDependency(assetReplacer);
 
     this.assetReplacer = assetReplacer;
     this.assetReplacerPolicy = assetReplacerPolicy;
+  }
+
+  protected createFunction(id: string, props: FunctionProps){
+    return new CdkFunction(this, id, props)
   }
 
   public get role() {
@@ -147,10 +152,10 @@ export class SsrFunction extends Construct implements SSTConstruct {
     attachPermissionsToRole(this.function.role as Role, permissions);
   }
 
-  private createFunction(assetBucket: string, assetKey: string) {
+  private createServerFunction(assetBucket: string, assetKey: string) {
     const { runtime, timeout, memorySize, handler, logRetention } = this.props;
 
-    return new CdkFunction(this, `ServerFunction`, {
+    return this.createFunction(`ServerFunction`, {
       ...this.props,
       // Prevents "Resolution error: Cannot use resource in a cross-environment
       // fashion, the resource's physical name must be explicit set or use
