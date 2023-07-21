@@ -63,6 +63,7 @@ import {
   FunctionCode as CfFunctionCode,
   FunctionEventType as CfFunctionEventType,
   DistributionProps,
+  experimental,
 } from "aws-cdk-lib/aws-cloudfront";
 import { ICertificate } from "aws-cdk-lib/aws-certificatemanager";
 import { AwsCliLayer } from "aws-cdk-lib/lambda-layer-awscli";
@@ -339,6 +340,11 @@ export interface SsrSiteProps {
    * ```
    */
   fileOptions?: SsrSiteFileOptions[];
+  /**
+   * Enables the AWS_IAM authentication mechanism on function URL
+   * @default "."
+   */
+  enableIAMAuth?: boolean;
 }
 
 type SsrSiteNormalizedProps = SsrSiteProps & {
@@ -373,6 +379,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
   protected bucket: Bucket;
   private cfFunction: CfFunction;
   private s3Origin: S3Origin;
+  protected signingFunction?: experimental.EdgeFunction;
   private distribution: Distribution;
   private hostedZone?: IHostedZone;
   private certificate?: ICertificate;
@@ -403,7 +410,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
 
     if (this.doNotDeploy) {
       // @ts-ignore
-      this.cfFunction = this.bucket = this.s3Origin = this.distribution = null;
+      this.cfFunction = this.signingFunction = this.bucket = this.s3Origin = this.distribution = null;
       this.serverLambdaForDev = this.createFunctionForDev();
       return;
     }
@@ -436,6 +443,9 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
     this.validateCloudFrontDistributionSettings();
     this.s3Origin = this.createCloudFrontS3Origin();
     this.cfFunction = this.createCloudFrontFunction();
+    this.signingFunction = this.props.enableIAMAuth
+      ? this.createSigningFunction()
+      : undefined;
     this.distribution = this.props.edge
       ? this.createCloudFrontDistributionForEdge()
       : this.createCloudFrontDistributionForRegional();
@@ -999,6 +1009,22 @@ function handler(event) {
     });
   }
 
+  private createSigningFunction() {
+    const fn = new experimental.EdgeFunction(this, "SigningFunction", {
+      runtime: Runtime.NODEJS_18_X,
+      code: Code.fromAsset(path.join(__dirname, "../support/signing-function")),
+      handler: "index.handler",
+      stackId: `${Stack.of(this).stackName}-edge-lambda-stack`,
+    });
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        actions: ['lambda:InvokeFunctionUrl'],
+        resources: [this.serverLambdaForRegional?.functionArn!],
+      })
+    )
+    return fn;
+  }
+
   protected createCloudFrontDistributionForRegional(): Distribution {
     const { cdk } = this.props;
     const cfDistributionProps = cdk?.distribution || {};
@@ -1066,10 +1092,12 @@ function handler(event) {
     const cfDistributionProps = cdk?.distribution || {};
 
     const fnUrl = this.serverLambdaForRegional!.addFunctionUrl({
-      authType: FunctionUrlAuthType.NONE,
+      authType: this.props.enableIAMAuth
+        ? FunctionUrlAuthType.AWS_IAM
+        : FunctionUrlAuthType.NONE,
     });
 
-    return {
+    const behaviorOptions: BehaviorOptions = {
       viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       origin: new HttpOrigin(Fn.parseDomainName(fnUrl.url), {
         readTimeout:
@@ -1087,6 +1115,27 @@ function handler(event) {
       functionAssociations: [
         ...this.buildBehaviorFunctionAssociations(),
         ...(cfDistributionProps.defaultBehavior?.functionAssociations || []),
+      ],
+    };
+
+    if (!this.props.enableIAMAuth) {
+      return behaviorOptions;
+    }
+
+    if (!this.signingFunction) {
+      throw new Error(
+        "signingFunction should be defined when IAM Auth is enabled"
+      );
+    }
+
+    return {
+      ...behaviorOptions,
+      edgeLambdas: [
+        {
+          includeBody: true,
+          eventType: LambdaEdgeEventType.ORIGIN_REQUEST,
+          functionVersion: this.signingFunction.currentVersion,
+        },
       ],
     };
   }
