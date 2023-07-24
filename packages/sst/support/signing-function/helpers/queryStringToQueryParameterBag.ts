@@ -27,7 +27,7 @@ export const queryStringToQueryParameterBag = (
       continue;
     }
 
-    query[key] = [query[key] as string, value];
+    query[key] = [query[key] as string, decodeURIComponent(value)];
   }
 
   return query;

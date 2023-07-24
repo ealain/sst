@@ -21,6 +21,7 @@ export const queryParameterBagToQueryString = (
 
     if (Array.isArray(value)) {
       serialized[key] = value.map((v) => `${key}=${v}`).join('&');
+      continue;
     }
 
     serialized[key] = `${key}=${value as string}`;
